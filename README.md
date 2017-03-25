@@ -6,4 +6,4 @@ This is a collection of sketches that can be run on the nRF52832 Development Boa
 
 The board has a MAX1555 battery charger and a USB Micro-B connector for charging only; the nRF52 has no USB controller. There is a NCP161 450 mA LDO 3V3 voltage regulator providing plenty of current to the board for adding sensors, SD cards, and displays, etc.
 
-There is an MPU9250 9 DoF motion sensor and a BMP280 altimeter on the board connected to nRF52 pins 6 and 7 for SDA/SCL, which are also routed to edge pins. The board breaks out all of the GPIOs except pin 10 (used for the MPU9250 interrupt), and pins 22, 23 and 24 (for the rgb led).
+There is an MPU9250 9 DoF motion sensor and a BMP280 altimeter on the board connected to nRF52 pins 6 and 7 for SDA/SCL, which are also routed to edge pins. The board breaks out all of the GPIOs except pin 8 (used for the MPU9250 interrupt), and pins 22, 23 and 24 (for the rgb led).
