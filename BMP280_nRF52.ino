@@ -48,7 +48,7 @@
 #define BMP280_ID         0xD0  // should be 0x58
 #define BMP280_CALIB00    0x88
 
-#define BMP280_ADDRESS           0x77   // Address of BMP280 altimeter when ADO = 0
+#define BMP280_ADDRESS    0x77   // Address of BMP280 altimeter when ADO = 0
 
 enum Posr {
   P_OSR_00 = 0,  // no op
