@@ -125,7 +125,7 @@ BLEDescriptor tempDescriptor = BLEDescriptor("2901", "Temp C x 100");
 BLEUnsignedLongCharacteristic pressureCharacteristic = BLEUnsignedLongCharacteristic("2A6D", BLERead | BLENotify); // pressure is uint32_t
 BLEDescriptor pressureDescriptor = BLEDescriptor("2901", "Pressure Pa x 10");
 
-BLEUnsignedLongCharacteristic elevationCharacteristic = BLEUnsignedLongCharacteristic("2A6C", BLERead | BLENotify); // elevation is int24_t
+BLELongCharacteristic elevationCharacteristic = BLELongCharacteristic("2A6C", BLERead | BLENotify); // elevation is int24_t
 BLEDescriptor elevationDescriptor = BLEDescriptor("2901", "Elevation meters x 100");
 
 // Battery Service
@@ -302,9 +302,9 @@ void setElevationCharacteristicValue() {
   if (!isnan(reading) && significantChange(lastElevationReading, reading, 1.0)) {
    // sends the data LSByte first, resolved to 0.01 m
    // sending data as m x 100
-    elevationCharacteristic.setValue((int32_t)(100 * reading)); // elevation, convert to Pa x 10
+    elevationCharacteristic.setValue((int32_t)(100 * reading)); // elevation, convert to m x 100
 
-    Serial.print(F("Elevation: ")); Serial.print((int32_t)(100 * reading)); Serial.println(F(" meters x 10"));
+    Serial.print(F("Elevation: ")); Serial.print((int32_t)(100 * reading)); Serial.println(F(" meters x 100"));
 
     lastPressureReading = reading;
   }
