@@ -22,7 +22,7 @@
  *  Lastly, this sketch requires that softdevice S132 be loaded into the nRF52 before the sketch is flashed 
  *  otherwise the BLE radio will not work. 
  *  
- *  This sketch was based on a template provided by Sandeep Mistry,
+ *  parts of this sketch were based on a template provided by Sandeep Mistry,
  *  according to the following license:
  *  
  *  Copyright (c) Sandeep Mistry. All rights reserved.
