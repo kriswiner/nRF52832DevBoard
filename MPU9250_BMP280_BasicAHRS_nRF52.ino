@@ -19,6 +19,14 @@
  SCL ----------------------- 7
  GND ---------------------- GND
  
+ *  Parts of this sketch were based on a template provided by Sandeep Mistry,
+ *  according to the following license:
+ *  
+ *  Copyright (c) Sandeep Mistry. All rights reserved.
+ *  Licensed under the MIT license. See LICENSE file in the project root for full license information.
+ *
+ *  Please refer to https://github.com/sandeepmistry/arduino-nRF5 for more information.
+ 
  */
 #include "Wire.h"   
 #include <SPI.h>
