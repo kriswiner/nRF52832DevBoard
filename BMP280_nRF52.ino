@@ -130,7 +130,7 @@ BLEDescriptor elevationDescriptor = BLEDescriptor("2901", "Elevation meters x 10
 
 // Battery Service
 BLEService batteryService = BLEService("180F");
-BLEUnsignedShortCharacteristic battlevelCharacteristic = BLEUnsignedShortCharacteristic("2A19", BLERead | BLENotify); // battery level is uint8_t
+BLEUnsignedCharCharacteristic battlevelCharacteristic = BLEUnsignedCharCharacteristic("2A19", BLERead | BLENotify); // battery level is uint8_t
 BLEDescriptor battlevelDescriptor = BLEDescriptor("2901", "Battery Level 0 - 100");
 
 int16_t  lastTempReading = 0;
