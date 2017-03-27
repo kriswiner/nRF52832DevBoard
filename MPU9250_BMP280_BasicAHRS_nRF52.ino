@@ -501,7 +501,9 @@ void setup()
 }
 
 void loop()
-{  
+{
+   blePeripheral.poll(); // start radio polling
+	
   //MPU9250
   // If intPin goes high, all data registers have new data
    if(newData == true) {  // On interrupt, read data
