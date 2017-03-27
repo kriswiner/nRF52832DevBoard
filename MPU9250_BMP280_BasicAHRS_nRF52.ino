@@ -19,14 +19,6 @@
  SCL ----------------------- 7
  GND ---------------------- GND
  
- *  Parts of this sketch were based on a template provided by Sandeep Mistry,
- *  according to the following license:
- *  
- *  Copyright (c) Sandeep Mistry. All rights reserved.
- *  Licensed under the MIT license. See LICENSE file in the project root for full license information.
- *
- *  Please refer to https://github.com/sandeepmistry/arduino-nRF5 for more information.
- 
  */
 #include "Wire.h"   
 #include <SPI.h>
@@ -336,13 +328,25 @@ BLEDescriptor elevationDescriptor = BLEDescriptor("2901", "Elevation meters x 10
 
 // Battery Service
 BLEService batteryService = BLEService("180F");
-BLEUnsignedShortCharacteristic battlevelCharacteristic = BLEUnsignedShortCharacteristic("2A19", BLERead | BLENotify); // battery level is uint8_t
+BLEUnsignedCharCharacteristic battlevelCharacteristic = BLEUnsignedCharCharacteristic("2A19", BLERead | BLENotify); // battery level is uint8_t
 BLEDescriptor battlevelDescriptor = BLEDescriptor("2901", "Battery Level 0 - 100");
+
+// Navigation Service
+BLEService navigationService("19B10000-E8F2-537E-4F6C-D104768A1314"); // define custom service
+BLEShortCharacteristic yawCharacteristic("19B10000-E8F2-537E-4F6C-D104768A1314", BLERead | BLENotify); // yaw is int16_t
+BLEDescriptor yawDescriptor("19B10000-E8F2-537E-4F6C-D104768A1314", "Yaw 0 to 360");
+BLEShortCharacteristic pitchCharacteristic("19B10000-E8F2-537E-4F6C-D104768A1314", BLERead | BLENotify); // yaw is int16_t
+BLEDescriptor pitchDescriptor("19B10000-E8F2-537E-4F6C-D104768A1314", "Pitch -180 to 180");
+BLEShortCharacteristic rollCharacteristic("19B10000-E8F2-537E-4F6C-D104768A1314", BLERead | BLENotify); // yaw is int16_t
+BLEDescriptor rollDescriptor("19B10000-E8F2-537E-4F6C-D104768A1314", "roll -90 to 90");
 
 int16_t  lastTempReading;
 uint32_t lastPressureReading;
 int32_t  lastElevationReading;
 uint8_t  lastBattLevelReading;
+int16_t  lastYawReading;
+int16_t  lastPitchReading;
+int16_t  lastRollReading;
 
 
 void setup()
@@ -440,6 +444,16 @@ void setup()
   blePeripheral.addAttribute(battlevelCharacteristic);
   blePeripheral.addAttribute(battlevelDescriptor);
 
+  // Navigation service
+  blePeripheral.setAdvertisedServiceUuid(navigationService.uuid());
+  blePeripheral.addAttribute(navigationService);
+  blePeripheral.addAttribute(yawCharacteristic);
+  blePeripheral.addAttribute(yawDescriptor);
+  blePeripheral.addAttribute(pitchCharacteristic);
+  blePeripheral.addAttribute(pitchDescriptor);
+  blePeripheral.addAttribute(rollCharacteristic);
+  blePeripheral.addAttribute(rollDescriptor);
+    
   blePeripheral.setEventHandler(BLEConnected, blePeripheralConnectHandler);
   blePeripheral.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
 
@@ -501,9 +515,9 @@ void setup()
 }
 
 void loop()
-{
-   blePeripheral.poll(); // start radio polling
-	
+{  
+      blePeripheral.poll(); // start radio polling
+      
   //MPU9250
   // If intPin goes high, all data registers have new data
    if(newData == true) {  // On interrupt, read data
@@ -531,7 +545,7 @@ void loop()
       mz *= MPU9250magScale[2]; 
     } 
   }
-  
+
   Now = micros();
   deltat = ((Now - lastUpdate)/1000000.0f); // set integration time by time elapsed since last filter update
   lastUpdate = Now;
@@ -553,10 +567,10 @@ void loop()
 
     // Serial print and/or display at 0.5 s rate independent of data rates
     delt_t = millis() - count;
-    if (delt_t > 500) { // update LCD once per half-second independent of read rate
-
+    if (delt_t > 1000) { // update LCD once per second independent of read rate
+  
     if(SerialDebug) {
-     Serial.println("MPU9250: ");
+    Serial.println("MPU9250: ");
     Serial.print("ax = "); Serial.print((int)1000*ax);  
     Serial.print(" ay = "); Serial.print((int)1000*ay); 
     Serial.print(" az = "); Serial.print((int)1000*az); Serial.println(" mg");
@@ -632,10 +646,13 @@ void loop()
     if(SerialDebug) {
     Serial.print("Yaw, Pitch, Roll: ");
     Serial.print(yaw, 2);
+    setYawCharacteristicValue();
     Serial.print(", ");
     Serial.print(pitch, 2);
+    setPitchCharacteristicValue();
     Serial.print(", ");
     Serial.println(roll, 2);
+    setRollCharacteristicValue();
 
     Serial.print("Grav_x, Grav_y, Grav_z: ");
     Serial.print(-a31*1000, 2);
@@ -656,9 +673,8 @@ void loop()
     digitalWrite(myLed, HIGH); delay(10); digitalWrite(myLed, LOW);
     count = millis(); 
     sumCount = 0;
-    sum = 0;    
-    }
-
+    sum = 0;   
+    } 
 }
 
 //===================================================================================================================
@@ -713,7 +729,7 @@ void setElevationCharacteristicValue() {
 }
 
 void setBattlevelCharacteristicValue() {
-    uint8_t reading = map(level, 0, 4095, 0, 100);;
+    uint8_t reading = map(level, 0, 4095, 0, 100);
 
   if (!isnan(reading) && significantChange(lastBattLevelReading, reading, 1.0)) {
    // sends single Byte
@@ -725,6 +741,49 @@ void setBattlevelCharacteristicValue() {
     lastBattLevelReading = reading;
   }
 }
+
+void setYawCharacteristicValue() {
+    int16_t reading = yaw;
+
+  if (!isnan(reading) && significantChange(lastYawReading, reading, 2.0)) {
+   // sends signed integer
+   // sending data as LSBtye first
+    yawCharacteristic.setValue((int16_t)(reading)); // yaw 0  to 360
+
+    Serial.print(F("Yaw: ")); Serial.print((int16_t)(reading)); Serial.println(F(" degrees"));
+
+    lastYawReading = reading;
+  }
+}
+
+void setPitchCharacteristicValue() {
+    int16_t reading = pitch;
+
+  if (!isnan(reading) && significantChange(lastPitchReading, reading, 2.0)) {
+   // sends signed integer
+   // sending data as LSBtye first
+    pitchCharacteristic.setValue((int16_t)(reading)); // pitch -180 to  180
+
+    Serial.print(F("Pitch: ")); Serial.print((int16_t)(reading)); Serial.println(F(" degrees"));
+
+    lastPitchReading = reading;
+  }
+}
+
+void setRollCharacteristicValue() {
+    int16_t reading = roll;
+
+  if (!isnan(reading) && significantChange(lastRollReading, reading, 2.0)) {
+   // sends signed integer
+   // sending data as LSBtye first
+   rollCharacteristic.setValue((int16_t)(reading)); // pitch -180 to  180
+
+    Serial.print(F("Pitch: ")); Serial.print((int16_t)(reading)); Serial.println(F(" degrees"));
+
+    lastRollReading = reading;
+  }
+}
+
 
 boolean significantChange(float val1, float val2, float threshold) {
   return (abs(val1 - val2) >= threshold);
