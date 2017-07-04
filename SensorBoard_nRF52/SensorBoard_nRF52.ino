@@ -1,4 +1,4 @@
-/* MENTAID v.01
+/* SensorBoard v.01
 
    This example code is in the public domain.
 */
