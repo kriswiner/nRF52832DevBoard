@@ -1,0 +1,1 @@
+Standard C++ library for using a variety of I2C sensors and an SPI flash with the nRF52832 development board. The sketch configures the sensors, checks the SPI flash ID, and sends a selection of the sensor data via BLE evey second.
