@@ -197,7 +197,7 @@ void setup()
   }
   else 
   {
-//    if(c != 0xFB) Serial.println(" BMA280 not functioning!");
+    if(c != 0xFB) Serial.println(" BMA280 not functioning!");
     if(d != 0x60) Serial.println(" BME280 not functioning!");    
   }
 
