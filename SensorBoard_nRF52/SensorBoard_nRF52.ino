@@ -206,7 +206,7 @@ void setup()
   // check SPI Flash ID
   SPIFlash.SPIFlashinit();
   SPIFlash.getChipID();
-  // Check VBAT to avoud brown-out loss of data!
+  // Check VBAT to avoid brown-out loss of data!
   rawVbat = analogRead(VbatMon);
   VBAT = (127.0f/100.0f) * 3.30f * ((float)rawVbat)/4095.0f;
   if(VBAT > 3.70) SPIFlash.flash_chip_erase(true); // full erase only if the battery is still good  
