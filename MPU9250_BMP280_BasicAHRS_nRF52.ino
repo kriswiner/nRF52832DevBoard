@@ -724,7 +724,7 @@ void setElevationCharacteristicValue() {
 
     Serial.print(F("Elevation: ")); Serial.print((int32_t)(100 * reading)); Serial.println(F(" meters x 100"));
 
-    lastPressureReading = reading;
+    lastElevationReading = reading;
   }
 }
 
