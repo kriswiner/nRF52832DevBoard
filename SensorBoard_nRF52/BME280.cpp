@@ -29,7 +29,7 @@ void BME280::resetBME280()
 }
 
 
-uint32_t BME280::readBME280Temperature()
+int32_t BME280::readBME280Temperature()
 {
   uint8_t rawData[3];  // 20-bit pressure register data stored here
   readBytes(BME280_ADDRESS, BME280_TEMP_MSB, 3, &rawData[0]);  
@@ -37,7 +37,7 @@ uint32_t BME280::readBME280Temperature()
 }
 
 
-uint32_t BME280::readBME280Pressure()
+int32_t BME280::readBME280Pressure()
 {
   uint8_t rawData[3];  // 20-bit pressure register data stored here
   readBytes(BME280_ADDRESS, BME280_PRESS_MSB, 3, &rawData[0]);  
