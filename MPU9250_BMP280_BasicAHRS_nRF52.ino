@@ -23,6 +23,7 @@
 #include "Wire.h"   
 #include <SPI.h>
 #include <BLEPeripheral.h>
+#include "BLESerial.h"
 
 // See also MPU-9250 Register Map and Descriptions, Revision 4.0, RM-MPU-9250A-00, Rev. 1.4, 9/9/2013 for registers not listed in 
 // above document; the MPU9250 and MPU9150 are virtually identical but the latter has a different register map
@@ -263,8 +264,10 @@ uint16_t dig_T1, dig_P1;
 int16_t  dig_T2, dig_T3, dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
 
 // Pin definitions
-int myLed  = 12;
-int intPin = A6; 
+int myLed1  = 10;
+int myLed2  = 11;
+int myLed3  = 12;
+int intPin = 0; 
 int VbatMon= A4; 
 
 bool newData = false;
@@ -313,6 +316,8 @@ float lin_ax, lin_ay, lin_az;             // linear acceleration (acceleration w
 float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};    // vector to hold quaternion
 float eInt[3] = {0.0f, 0.0f, 0.0f};       // vector to hold integral error for Mahony method
 
+BLESerial bleSerial;
+
 BLEPeripheral blePeripheral = BLEPeripheral();
 
 // Environmental Sensing Service
@@ -335,9 +340,9 @@ BLEDescriptor battlevelDescriptor = BLEDescriptor("2901", "Battery Level 0 - 100
 BLEService navigationService("19B10000-E8F2-537E-4F6C-D104768A1314"); // define custom service
 BLEShortCharacteristic yawCharacteristic("19B10000-E8F2-537E-4F6C-D104768A1314", BLERead | BLENotify); // yaw is int16_t
 BLEDescriptor yawDescriptor("19B10000-E8F2-537E-4F6C-D104768A1314", "Yaw 0 to 360");
-BLEShortCharacteristic pitchCharacteristic("19B10000-E8F2-537E-4F6C-D104768A1314", BLERead | BLENotify); // yaw is int16_t
+BLEShortCharacteristic pitchCharacteristic("19B10000-E8F2-537E-4F6C-D104768A1314", BLERead | BLENotify); // pitch is int16_t
 BLEDescriptor pitchDescriptor("19B10000-E8F2-537E-4F6C-D104768A1314", "Pitch -180 to 180");
-BLEShortCharacteristic rollCharacteristic("19B10000-E8F2-537E-4F6C-D104768A1314", BLERead | BLENotify); // yaw is int16_t
+BLEShortCharacteristic rollCharacteristic("19B10000-E8F2-537E-4F6C-D104768A1314", BLERead | BLENotify); // roll is int16_t
 BLEDescriptor rollDescriptor("19B10000-E8F2-537E-4F6C-D104768A1314", "roll -90 to 90");
 
 int16_t  lastTempReading;
@@ -353,12 +358,21 @@ void setup()
 {
   Wire.begin(); // set default I2C on pins 6 and 7
   Wire.setClock(100000);
-  Serial.begin(38400);
+  
+  //bleSerial.setLocalName("UART");
+
+  Serial.begin(115200);
+  //bleSerial.begin();
   delay(4000);
   
-  // Set up the interrupt pin, its set as active high, push-pull
-  pinMode(myLed, OUTPUT);
-  digitalWrite(myLed, HIGH);
+  // Set up the leds
+  pinMode(myLed1, OUTPUT);
+  digitalWrite(myLed1, LOW); // active LOW
+  pinMode(myLed2, OUTPUT);
+  digitalWrite(myLed2, HIGH);
+  pinMode(myLed3, OUTPUT);
+  digitalWrite(myLed3, HIGH);
+
 
    // Voltage divider 27K/100K to monitor LiPo battery voltage
   pinMode(VbatMon, INPUT);
@@ -372,6 +386,7 @@ void setup()
   Serial.println("MPU9250 9-axis motion sensor...");
   byte c = readByte(MPU9250_ADDRESS, MPU9250_WHO_AM_I);  // Read WHO_AM_I register for MPU-9250
   Serial.print("MPU9250 "); Serial.print("I AM "); Serial.print(c, HEX); Serial.print(" I should be "); Serial.println(0x71, HEX);
+  digitalWrite(myLed1, HIGH);
 
   delay(1000); 
 
@@ -394,11 +409,13 @@ void setup()
    MPU9250getGres();
    MPU9250getMres();
     
+   digitalWrite(myLed2, LOW);
+   delay(2000);
    Serial.println(" Calibrate MPU9250 gyro and accel");
    accelgyrocalMPU9250(MPU9250gyroBias, MPU9250accelBias); // Calibrate gyro and accelerometers, load biases in bias registers
    Serial.println("accel biases (mg)"); Serial.println(1000.*MPU9250accelBias[0]); Serial.println(1000.*MPU9250accelBias[1]); Serial.println(1000.*MPU9250accelBias[2]);
    Serial.println("gyro biases (dps)"); Serial.println(MPU9250gyroBias[0]); Serial.println(MPU9250gyroBias[1]); Serial.println(MPU9250gyroBias[2]);
-
+   digitalWrite(myLed2, HIGH);
   delay(1000);  
    
   initMPU9250(); 
@@ -412,10 +429,13 @@ void setup()
   
   // Get magnetometer calibration from AK8963 ROM
   initAK8963(magCalibration); Serial.println("AK8963 initialized for active data mode...."); // Initialize device for active mode read of magnetometer
-  
+
+  digitalWrite(myLed3, LOW);
+  delay(2000); 
   magcalMPU9250(MPU9250magBias, MPU9250magScale);
   Serial.println("AK8963 mag biases (mG)"); Serial.println(MPU9250magBias[0]); Serial.println(MPU9250magBias[1]); Serial.println(MPU9250magBias[2]); 
   Serial.println("AK8963 mag scale (mG)"); Serial.println(MPU9250magScale[0]); Serial.println(MPU9250magScale[1]); Serial.println(MPU9250magScale[2]); 
+  digitalWrite(myLed3, HIGH);
   delay(2000); // add delay to see results before serial spew of data
    
   if(SerialDebug) {
@@ -425,7 +445,7 @@ void setup()
   }
   
   delay(1000);  
-
+ 
   blePeripheral.setLocalName("Environmental Sensor Sketch");
 
  // Environmental Sensor service
@@ -517,6 +537,8 @@ void setup()
 void loop()
 {  
       blePeripheral.poll(); // start radio polling
+
+//      bleSerial.poll();
       
   //MPU9250
   // If intPin goes high, all data registers have new data
@@ -553,17 +575,14 @@ void loop()
   sum += deltat; // sum for averaging filter update rate
   sumCount++;
   
-  // Sensors x (y)-axis of the accelerometer/gyro is aligned with the y (x)-axis of the magnetometer;
-  // the magnetometer z-axis (+ down) is misaligned with z-axis (+ up) of accelerometer and gyro!
-  // We have to make some allowance for this orientation mismatch in feeding the output to the quaternion filter.
-  // For the MPU9250+MS5637 Mini breakout the +x accel/gyro is North, then -y accel/gyro is East. So if we want te quaternions properly aligned
-  // we need to feed into the Madgwick function Ax, -Ay, -Az, Gx, -Gy, -Gz, My, -Mx, and Mz. But because gravity is by convention
-  // positive down, we need to invert the accel data, so we pass -Ax, Ay, Az, Gx, -Gy, -Gz, My, -Mx, and Mz into the Madgwick
-  // function to get North along the accel +x-axis, East along the accel -y-axis, and Down along the accel -z-axis.
-  // This orientation choice can be modified to allow any convenient (non-NED) orientation convention.
-  // Pass gyro rate as rad/s
-    MadgwickQuaternionUpdate(ax, ay, az, gx*pi/180.0f, gy*pi/180.0f, gz*pi/180.0f,  my,  mx, -mz);
-//  MahonyQuaternionUpdate(-ax, ay, az, gx*pi/180.0f, -gy*pi/180.0f, -gz*pi/180.0f,  my,  -mx, mz);
+  /* Sensors x (y)-axis of the accelerometer/gyro is aligned with the y (x)-axis of the magnetometer;
+     the magnetometer z-axis (+ down) is misaligned with z-axis (+ up) of accelerometer and gyro!
+     We have to make some allowance for this orientation mismatch in feeding the output to the quaternion filter.
+     Choose North to be the front of the board (the antenna end) which is Ay, then East is Ax, down is -Az, same 
+     for gyro. For mag, x/y/z is already oriented along North/East/Down.
+     Pass gyro rate as rad/s */
+    MadgwickQuaternionUpdate(ay, ax, -az, gy*pi/180.0f, gx*pi/180.0f, -gz*pi/180.0f,  mx,  my, mz);
+//  MahonyQuaternionUpdate(ay, ax, -az, gy*pi/180.0f, gx*pi/180.0f, -gz*pi/180.0f,  mx,  my, mz);
 
     // Serial print and/or display at 0.5 s rate independent of data rates
     delt_t = millis() - count;
@@ -670,7 +689,11 @@ void loop()
     Serial.print("rate = "); Serial.print((float)sumCount/sum, 2); Serial.println(" Hz");
     }
 
-    digitalWrite(myLed, HIGH); delay(10); digitalWrite(myLed, LOW);
+//    bleSerial.print(yaw, 1); bleSerial.print(" "); 
+//    bleSerial.print(pitch, 1); bleSerial.print(" "); 
+ //   bleSerial.print(roll, 1);  bleSerial.flush();
+          
+    digitalWrite(myLed3, LOW); delay(10); digitalWrite(myLed3, HIGH);
     count = millis(); 
     sumCount = 0;
     sum = 0;   
@@ -724,7 +747,7 @@ void setElevationCharacteristicValue() {
 
     Serial.print(F("Elevation: ")); Serial.print((int32_t)(100 * reading)); Serial.println(F(" meters x 100"));
 
-    lastElevationReading = reading;
+    lastPressureReading = reading;
   }
 }
 
@@ -747,7 +770,7 @@ void setYawCharacteristicValue() {
 
   if (!isnan(reading) && significantChange(lastYawReading, reading, 2.0)) {
    // sends signed integer
-   // sending data as LSBtye first
+   // sending data as LSByte first
     yawCharacteristic.setValue((int16_t)(reading)); // yaw 0  to 360
 
     Serial.print(F("Yaw: ")); Serial.print((int16_t)(reading)); Serial.println(F(" degrees"));
@@ -761,7 +784,7 @@ void setPitchCharacteristicValue() {
 
   if (!isnan(reading) && significantChange(lastPitchReading, reading, 2.0)) {
    // sends signed integer
-   // sending data as LSBtye first
+   // sending data as LSByte first
     pitchCharacteristic.setValue((int16_t)(reading)); // pitch -180 to  180
 
     Serial.print(F("Pitch: ")); Serial.print((int16_t)(reading)); Serial.println(F(" degrees"));
@@ -775,7 +798,7 @@ void setRollCharacteristicValue() {
 
   if (!isnan(reading) && significantChange(lastRollReading, reading, 2.0)) {
    // sends signed integer
-   // sending data as LSBtye first
+   // sending data as LSByte first
    rollCharacteristic.setValue((int16_t)(reading)); // pitch -180 to  180
 
     Serial.print(F("Pitch: ")); Serial.print((int16_t)(reading)); Serial.println(F(" degrees"));
@@ -951,11 +974,11 @@ void initMPU9250()
                                     // determined inset in CONFIG above
  
  // Set gyroscope full scale range
- // Range selects FS_SEL and GFS_SEL are 0 - 3, so 2-bit values are left-shifted into positions 4:3
+ // Range selects FS_SEL and AFS_SEL are 0 - 3, so 2-bit values are left-shifted into positions 4:3
   uint8_t c = readByte(MPU9250_ADDRESS, MPU9250_GYRO_CONFIG);
 //  writeRegister(GYRO_CONFIG, c & ~0xE0); // Clear self-test bits [7:5] 
-  writeByte(MPU9250_ADDRESS, MPU9250_GYRO_CONFIG, c & ~0x03); // Clear Fchoice bits [1:0] 
-  writeByte(MPU9250_ADDRESS, MPU9250_GYRO_CONFIG, c & ~0x18); // Clear GFS bits [4:3]
+  writeByte(MPU9250_ADDRESS, MPU9250_GYRO_CONFIG, c & ~0x02); // Clear Fchoice bits [1:0] 
+  writeByte(MPU9250_ADDRESS, MPU9250_GYRO_CONFIG, c & ~0x18); // Clear AFS bits [4:3]
   writeByte(MPU9250_ADDRESS, MPU9250_GYRO_CONFIG, c | MPU9250Gscale << 3); // Set full scale range for the gyro
  // writeRegister(GYRO_CONFIG, c | 0x00); // Set Fchoice for the gyro to 11 by writing its inverse to bits 1:0 of GYRO_CONFIG
   
@@ -1138,7 +1161,7 @@ void magcalMPU9250(float * dest1, float * dest2)
 {
   uint16_t ii = 0, sample_count = 0;
   int32_t mag_bias[3] = {0, 0, 0}, mag_scale[3] = {0, 0, 0};
-  int16_t mag_max[3] = {0x8000, 0x8000, 0x8000}, mag_min[3] = {0x7FFF, 0x7FFF, 0x7FFF}, mag_temp[3] = {0, 0, 0};
+  int16_t mag_max[3] = {-32767, -32767, -32767}, mag_min[3] = {32767, 32767, 32767}, mag_temp[3] = {0, 0, 0};
 
   Serial.println("Mag Calibration: Wave device in a figure eight until done!");
   delay(4000);
